@@ -8,39 +8,78 @@ This client accepts the following options:
 
 (C) João Galamba && Tiago Domingos, 2023
 """
-
-import sys;
+# import docopt
+import sys
+from tftp import *
 
 def main():
-    while True:
-        print("TFTPy - Cliente de TFTP")
-        print("Receber ficheiro - get ficheiro_remoto [ficheiro_local]")
-        # get ficheiro_remoto [ficheiro_local]
-        print("Enviar ficheiro - put ficheiro_local [ficheiro_remoto]")
-        # put ficheiro_local [ficheiro_remoto]
-        print("Pretende Sair do TFTP? Insira quit...")
-        # quit
-        print("Quer Ajuda? Help ou ?")
-        # help
+        if len(sys.argv) < 2:
+            print("Comando inválido. Use 'get', 'put', ou 'tftf'.")
+            sys.exit(1)
 
-        opcao = input("Opção > ")
+        comando = sys.argv[1]
 
-        if opcao.upper() in ('GET', 'OBTER'):
-            pass
+        if comando == 'get':
+            if len(sys.argv) < 4:
+                print("Usage: python3 client.py get [-p serv_port] server source_file [dest_file]")
+                sys.exit(1)
 
-        elif opcao.upper() in ('PUT', 'ENVIAR'):
-            pass
+            server = sys.argv[2]
+            source_file = sys.argv[3]
+            dest_file = sys.argv[4] if len(sys.argv) >= 5 else None
+            serv_port = int(sys.argv[3][3:]) if len(sys.argv) >= 5 and sys.argv[3].startswith('-p') else 69
+            server_addr = (server, serv_port)
 
-        elif opcao.upper() in ('QUIT', 'SAIR'):
-            print("Exiting TFTP client.")
-            print("Goodbye!")
-            sys.exit(0);
+            try:
+                get_file(server_addr, source_file, dest_file)
+            except NetworkError as e:
+                print(f"Error reaching the server '{server}' ({e}).")
+            except ProtocolError as e:
+                print(f"Protocol error: {e}")
+
+        elif comando == 'put':
+            if len(sys.argv) < 4:
+                print("Usage: python3 client.py put [-p serv_port] server source_file [dest_file]")
+                sys.exit(1)
+
+            server = sys.argv[2]
+            source_file = sys.argv[3]
+            dest_file = sys.argv[4] if len(sys.argv) >= 5 else None
+            serv_port = int(sys.argv[3][3:]) if len(sys.argv) >= 5 and sys.argv[3].startswith('-p') else 69
+            server_addr = (server, serv_port)
+
+            try:
+                put_file(server, source_file, dest_file)
+            except NetworkError as e:
+                print(f"Error reaching the server '{server}' ({e}).")
+            except ProtocolError as e:
+                print(f"Protocol error: {e}")
+
+        elif comando == 'tftp':
+            while True:
+                print("TFTPy - Cliente de TFTP")
+                opcao = input('TFTP > ')
+                if opcao in ('get'):
+                    print("Receber ficheiro - get ficheiro_remoto [ficheiro_local]")
+                    # get ficheiro_remoto [ficheiro_local]
+                elif opcao in ('put'):
+                    print("Enviar ficheiro - put ficheiro_local [ficheiro_remoto]")
+                    # put ficheiro_local [ficheiro_remoto]
+                elif opcao in ('help', '?'):
+                    ajuda()
+                elif opcao in 'quit':
+                    print("Exiting TFTP client.")
+                    print("Goodbye!")
+                    sys.exit(0);
+                else:
+                    print(f"Opção {opcao} inválida")
         
-        elif opcao.upper() in ('HELP', 'AJUDA', '?'):
-            ajuda()
+        #elif opcao.upper() in ('HELP', 'AJUDA', '?'):
+        #    ajuda()
         
         else:
-            print(f"Opção {opcao} inválida")
+            print(f"Opção {comando} inválida")
+        #    print(ajuda())
 #:
 
 def ajuda():
@@ -51,5 +90,8 @@ def ajuda():
     print("  quit                         - exit TFTP client")
 
 if __name__ == '__main__':
+    #arguments = docopt(__doc__, version='TFTPy Python - 1')
+    #print(arguments)
     main()
+    
 #:

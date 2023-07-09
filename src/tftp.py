@@ -47,13 +47,21 @@ ERR = 5   # Error packet; what the server responds if a read/write
 ERR_NOT_DEFINED = 0
 ERR_FILE_NOT_FOUND = 1
 ERR_ACCESS_VIOLATION = 2
-# Acrescentar códigos de erro em falta
+ERR_DISKFULL_OR_ALLOCEXCEEDED = 3
+ERR_ILLEGAL_TFTP_OP = 4
+ERR_UNKNOWN_TRANSFER_ID = 5
+ERR_FILE_ALREADY_EXISTS = 6
+ERR_NO_SUCH_USER = 7
 
 ERROR_MESSAGES = {
     ERR_NOT_DEFINED: 'Not defined, see error message (if any)',
     ERR_FILE_NOT_FOUND: 'File not found',
     ERR_ACCESS_VIOLATION: 'Access violation',
-    # Acrescentar mensagens em falta
+    ERR_DISKFULL_OR_ALLOCEXCEEDED: 'Disk full or allocation exceeded',
+    ERR_ILLEGAL_TFTP_OP: 'Illegal TFTP Operation',
+    ERR_UNKNOWN_TRANSFER_ID: 'Unknown transfer ID',
+    ERR_FILE_ALREADY_EXISTS: 'File already exists',
+    ERR_NO_SUCH_USER: 'No such user'
 }
 
 INET4Address = tuple[str, int]      # TCP/UDP address => IPv4 and port
@@ -64,7 +72,7 @@ INET4Address = tuple[str, int]      # TCP/UDP address => IPv4 and port
 ##
 ###############################################################
 
-def get_file(server_addr: INET4Address, filename: str):
+def get_file(server_addr: INET4Address, filename: str, dest_file: str = None):
     """
     Get the remote file given by `filename` through a TFTP RRQ 
     connection to remote server at `server_addr`.
@@ -97,7 +105,8 @@ def get_file(server_addr: INET4Address, filename: str):
         rrq = pack_rrq(filename)
         sock.sendto(rrq, server_addr)
         next_block_num = 1
-        with open(filename, 'wb') as file:
+        save_file = dest_file if dest_file is not None else filename
+        with open(save_file, 'wb') as file:
             while True:
                 packet = sock.recvfrom(DEFAULT_BUFFER_SIZE)
                 opcode = unpack_opcode(packet)
@@ -129,31 +138,31 @@ def get_file(server_addr: INET4Address, filename: str):
     #:
 #:
 
-def put_file(server_addr: INET4Address, filename: str):
+def put_file(server_addr: INET4Address, filename: str, dest_file: str = None):
     with socket(AF_INET, SOCK_DGRAM) as sock:
         sock.settimeout(INACTIVITY_TIMEOUT)
         wrq = pack_wrq(filename)
-        sock.recvfrom(wrq, server_addr)
+        sock.sendto(wrq, server_addr)
         block_num = 0
-        with open(filename, 'rb') as file:
+        save_file = dest_file if dest_file is not None else filename
+        with open(save_file, 'rb') as file:
             while True:
-                packet = sock.sendto(DEFAULT_BUFFER_SIZE)
+                packet = sock.recvfrom(DEFAULT_BUFFER_SIZE)
                 opcode = unpack_opcode(packet)
 
-                if opcode == DAT:
-                    block_number, data = unpack_dat(packet)
-                    if block_number not in (block_num):
-                        raise ProtocolError(f'Unexpected block number: {block_number}')
+                if opcode == ACK:
+                    received_block_number = unpack_ack(packet)
+                    if received_block_number not in (block_num):
+                        raise ProtocolError(f'Unexpected block number: {received_block_number}')
 
-                    if block_number == block_num:    
-                        file.read(data)
-                        block_number += 1
-                    
-                    ack = pack_ack(block_number)
-                    sock.recvfrom(ack, server_addr)
+                    data = file.read(MAX_DATA_LEN)
+                    packet = pack_dat(block_num, data)
+                    sock.sendto(packet, server_addr)
 
                     if len(data) < MAX_DATA_LEN:
                         break
+
+                    block_num += 1
 
                 elif opcode == ERR:
                     error_code, error_msg = unpack_err(packet)
