@@ -6,6 +6,8 @@ This client accepts the following options:
     $ python3 client.py (get|put) [-p serv_port] server source_file [dest_file] 
     $ python3 client.py [-p serv_port] server
 
+    Data de entrega 14/07/2023
+
 (C) João Galamba && Tiago Domingos, 2023
 """
 # import docopt
@@ -49,7 +51,7 @@ def main():
             server_addr = (server, serv_port)
 
             try:
-                put_file(server, source_file, dest_file)
+                put_file(server_addr, source_file, dest_file)
             except NetworkError as e:
                 print(f"Error reaching the server '{server}' ({e}).")
             except ProtocolError as e:
@@ -58,13 +60,32 @@ def main():
         elif comando == 'tftp':
             while True:
                 print("TFTPy - Cliente de TFTP")
-                opcao = input('TFTP > ')
+                opcao = input('TFTP Client > ')
                 if opcao in ('get'):
                     print("Receber ficheiro - get ficheiro_remoto [ficheiro_local]")
                     # get ficheiro_remoto [ficheiro_local]
+                    server_addr = input("Server > ")
+                    source_file = input("Ficheiro fonte > ")
+                    dest_file = input("Opcional destino do ficheiro > ")
+                    try:
+                        get_file(server_addr, source_file, dest_file)
+                    except NetworkError as e:
+                        print(f"Error reaching the server '{server}' ({e}).")
+                    except ProtocolError as e:
+                        print(f"Protocol error: {e}")
+
                 elif opcao in ('put'):
                     print("Enviar ficheiro - put ficheiro_local [ficheiro_remoto]")
                     # put ficheiro_local [ficheiro_remoto]
+                    server_addr = input("Server > ")
+                    source_file = input("Ficheiro fonte > ")
+                    dest_file = input("Opcional destino do ficheiro > ")
+                    try:
+                        put_file(server_addr, source_file, dest_file)
+                    except NetworkError as e:
+                        print(f"Error reaching the server '{server}' ({e}).")
+                    except ProtocolError as e:
+                        print(f"Protocol error: {e}")
                 elif opcao in ('help', '?'):
                     ajuda()
                 elif opcao in 'quit':
